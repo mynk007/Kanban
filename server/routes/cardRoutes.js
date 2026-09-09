@@ -6,13 +6,14 @@ import {
   updateCard,
   deleteCard,
 } from '../controllers/cardControllers.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', createCard);
-router.get('/', getCards);
-router.get('/:id', getCardById);
-router.put('/:id', updateCard);
-router.delete('/:id', deleteCard);
+router.post('/', protect, createCard);
+router.get('/', protect, getCards);
+router.get('/:id', protect, getCardById);
+router.put('/:id', protect, updateCard);
+router.delete('/:id', protect, deleteCard);
 
 export default router;
