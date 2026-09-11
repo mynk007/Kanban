@@ -29,6 +29,11 @@ export default function BoardDetail() {
     const [loading, setLoading] = useState(true);
     const [newListTitle, setNewListTitle] = useState('');
     const [newCardTitles, setNewCardTitles] = useState<Record<string, string>>({});
+    const [editingListId, setEditingListId] = useState<string | null>(null);
+    const [editListTitle, setEditListTitle] = useState('');
+    const [editingCardId, setEditingCardId] = useState<string | null>(null);
+    const [editCardTitle, setEditCardTitle] = useState('');
+
 
     const loadBoard = async () => {
         setLoading(true);
@@ -56,6 +61,39 @@ export default function BoardDetail() {
     useEffect(() => {
         loadBoard();
     }, [boardId]);
+
+    const saveListEdit = async (listId: string) => {
+        if (!editListTitle.trim()) return;
+        const res = await api.put(`/lists/${listId}`, { title: editListTitle });
+        setLists((prev) => prev.map((l) => (l._id === listId ? res.data : l)));
+        setEditingListId(null);
+    };
+
+    const deleteList = async (listId: string) => {
+        if (!window.confirm('Delete this list and all its cards?')) return;
+        await api.delete(`/lists/${listId}`);
+        setLists((prev) => prev.filter((l) => l._id !== listId));
+    };
+
+    const saveCardEdit = async (listId: string, cardId: string) => {
+        if (!editCardTitle.trim()) return;
+        const res = await api.put(`/cards/${cardId}`, { title: editCardTitle });
+        setCardsByList((prev) => ({
+            ...prev,
+            [listId]: prev[listId].map((c) => (c._id === cardId ? res.data : c)),
+        }));
+        setEditingCardId(null);
+    };
+
+    const deleteCard = async (listId: string, cardId: string) => {
+        if (!window.confirm('Delete this card?')) return;
+        await api.delete(`/cards/${cardId}`);
+        setCardsByList((prev) => ({
+            ...prev,
+            [listId]: prev[listId].filter((c) => c._id !== cardId),
+        }));
+    };
+
 
     const handleCreateList = async (e: FormEvent) => {
         e.preventDefault();
@@ -106,14 +144,84 @@ export default function BoardDetail() {
             <div className="p-8 flex gap-4 overflow-x-auto items-start">
                 {lists.map((list) => (
                     <div key={list._id} className="bg-gray-200 rounded-lg p-3 w-72 flex-shrink-0">
-                        <h2 className="font-semibold text-sm mb-3">{list.title}</h2>
+                        {editingListId === list._id ? (
+                            <div className="flex gap-1 mb-3">
+                                <input
+                                    type="text"
+                                    value={editListTitle}
+                                    onChange={(e) => setEditListTitle(e.target.value)}
+                                    autoFocus
+                                    className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                                <button onClick={() => saveListEdit(list._id)} className="text-xs text-indigo-600 font-medium">
+                                    Save
+                                </button>
+                                <button onClick={() => setEditingListId(null)} className="text-xs text-gray-500">
+                                    Cancel
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="font-semibold text-sm">{list.title}</h2>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setEditingListId(list._id);
+                                            setEditListTitle(list.title);
+                                        }}
+                                        className="text-gray-400 hover:text-indigo-600 text-xs"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button onClick={() => deleteList(list._id)} className="text-gray-400 hover:text-red-600 text-xs">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex flex-col gap-2 mb-3">
-                            {(cardsByList[list._id] ?? []).map((card) => (
-                                <div key={card._id} className="bg-white rounded-md p-3 shadow-sm text-sm">
-                                    {card.title}
-                                </div>
-                            ))}
+                            {(cardsByList[list._id] ?? []).map((card) =>
+                                editingCardId === card._id ? (
+                                    <div key={card._id} className="flex gap-1">
+                                        <input
+                                            type="text"
+                                            value={editCardTitle}
+                                            onChange={(e) => setEditCardTitle(e.target.value)}
+                                            autoFocus
+                                            className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                        />
+                                        <button onClick={() => saveCardEdit(list._id, card._id)} className="text-xs text-indigo-600 font-medium">
+                                            Save
+                                        </button>
+                                        <button onClick={() => setEditingCardId(null)} className="text-xs text-gray-500">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div
+                                        key={card._id}
+                                        className="bg-white rounded-md p-3 shadow-sm text-sm flex items-center justify-between group"
+                                    >
+                                        <span>{card.title}</span>
+                                        <div className="hidden group-hover:flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setEditingCardId(card._id);
+                                                    setEditCardTitle(card.title);
+                                                }}
+                                                className="text-gray-400 hover:text-indigo-600 text-xs"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button onClick={() => deleteCard(list._id, card._id)} className="text-gray-400 hover:text-red-600 text-xs">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                )
+                            )}
+
                         </div>
 
                         <form onSubmit={(e) => handleCreateCard(list._id, e)} className="flex gap-1">
