@@ -1,4 +1,6 @@
 import Board from '../models/Board.js';
+import Card from '../models/Card.js';
+import List from '../models/List.js';
 
 export const createBoard = async (req, res) => {
   try {
@@ -53,6 +55,10 @@ export const deleteBoard = async (req, res) => {
     if (board.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to delete this board' });
     }
+    const lists = await List.find({ board: board._id });
+    const listIds = lists.map((list) => list._id);
+    await Card.deleteMany({ list: { $in: listIds } });
+    await List.deleteMany({ board: board._id });
     await board.deleteOne();
     res.json({ message: 'Board deleted' });
   } catch (err) {

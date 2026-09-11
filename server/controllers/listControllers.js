@@ -1,3 +1,4 @@
+import Card from '../models/Card.js';
 import List from '../models/List.js';
 import { isBoardOwner } from '../utils/checkBoardOwnership.js';
 
@@ -64,8 +65,8 @@ export const deleteList = async (req, res) => {
 
     const owns = await isBoardOwner(list.board, req.user._id);
     if (!owns) return res.status(403).json({ message: 'Not authorized for this list' });
-
-    await list.deleteOne();
+    await Card.deleteMany({ list: list._id });
+    await List.deleteOne({ _id: list._id });
     res.json({ message: 'List deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
